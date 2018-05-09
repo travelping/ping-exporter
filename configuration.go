@@ -59,7 +59,7 @@ func updateConfig() {
 	listenAddress = viper.GetString("web.listen-address")
 	metricsPath = viper.GetString("web.telemetry-path")
 	pingInterval = viper.GetDuration("ping.interval")
-	pingTimeout = viper.GetDuration("ping.interval")
+	pingTimeout = viper.GetDuration("ping.timeout")
 	pingTarget = viper.GetStringSlice("ping.target")
 	pingSourceV4 = viper.GetString("ping.source.ipv4")
 	pingSourceV6 = viper.GetString("ping.source.ipv6")
