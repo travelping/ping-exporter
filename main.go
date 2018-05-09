@@ -2,54 +2,37 @@ package main
 
 import (
 	"flag"
-	"os"
 	"fmt"
-	"net/http"
+	"github.com/digineo/go-ping"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/digineo/go-ping"
+	"net/http"
+	"os"
 
-     mon "github.com/digineo/go-ping/monitor"
-    "github.com/prometheus/common/log"
+	mon "github.com/digineo/go-ping/monitor"
+	"github.com/prometheus/common/log"
 	"net"
 	"time"
-	"strings"
 )
 
 const version string = "0.1.0"
 
 var (
-    showVersion = flag.Bool("version", false, "Print version information")
-    addr = flag.String("listen-address", ":8080", "The address to listen on for HTTP requests.")
-    metricsPath = flag.String("web.telemetry-path", "/metrics", "Path under which metrics will be exposed")
-	listenAddress = flag.String("web.listen-address", ":9427", "Address on which to expose metrics and web interface")
-	pingInterval  = flag.Duration("ping.interval", time.Duration(5)*time.Second, "Interval for ICMP echo requests")
-	pingTimeout   = flag.Duration("ping.timeout", time.Duration(4)*time.Second, "Timeout for ICMP echo request")
-	pingTarget		  = flag.String("ping.target", "9.9.9.9", "IP address of target")
-	dnsRefresh    = flag.Duration("dns.refresh", time.Duration(1)*time.Minute, "Interval for refreshing DNS records and updating targets accordingly (0 if disabled)")
-
+	showVersion = flag.Bool("version", false, "Print version information")
 )
 
 var (
-	uniformDomain     = flag.Float64("uniform.domain", 0.0002, "The domain for the uniform distribution.")
-	normDomain        = flag.Float64("normal.domain", 0.0002, "The domain for the normal distribution.")
-	normMean          = flag.Float64("normal.mean", 0.00001, "The mean for the normal distribution.")
-)
-
-var (
-    pingDurationHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{
-        Name:       "ping_durations_histogram_seconds",
-        Help:       "Ping Latency distribution.",
-        Buckets:    prometheus.LinearBuckets(*normMean-5**normDomain, .5**normDomain, 20),
-    })
+	uniformDomain = flag.Float64("uniform.domain", 0.0002, "The domain for the uniform distribution.")
+	normDomain    = flag.Float64("normal.domain", 0.0002, "The domain for the normal distribution.")
+	normMean      = flag.Float64("normal.mean", 0.00001, "The mean for the normal distribution.")
 )
 
 func init() {
-    flag.Usage = func() {
-        fmt.Println("Usage:", os.Args[0], "-config.path=$my-config-file [options]")
-        fmt.Println()
-        flag.PrintDefaults()
-    }
+	flag.Usage = func() {
+		fmt.Println("Usage:", os.Args[0], "-config.path=$my-config-file [options]")
+		fmt.Println()
+		flag.PrintDefaults()
+	}
 }
 
 func printVersion() {
@@ -60,21 +43,19 @@ func printVersion() {
 }
 
 func startMonitor() (*mon.Monitor, error) {
-	pinger, err := ping.New("0.0.0.0", "::")
+	pinger, err := ping.New(pingSourceV4, pingSourceV6)
 	if err != nil {
 		return nil, err
 	}
 
-	monitor := mon.New(pinger, *pingInterval, *pingTimeout)
+	monitor := mon.New(pinger, pingInterval, pingTimeout)
 
-	targetList := strings.Split(*pingTarget, ",")
-
-	targets := make([]*target, len(targetList))
-	for i, host := range targetList {
-		t := &target {
-			host: host,
+	targets := make([]*target, len(pingTarget))
+	for i, host := range pingTarget {
+		t := &target{
+			host:      host,
 			addresses: make([]net.IP, 0),
-			delay: time.Duration(10*i) * time.Millisecond,
+			delay:     time.Duration(10*i) * time.Millisecond,
 		}
 		targets[i] = t
 
@@ -91,13 +72,13 @@ func startMonitor() (*mon.Monitor, error) {
 }
 
 func startDNSAutoRefresh(targets []*target, monitor *mon.Monitor) {
-	if *dnsRefresh == 0 {
+	if dnsRefresh == 0 {
 		return
 	}
 
 	for {
 		select {
-		case <-time.After(*dnsRefresh):
+		case <-time.After(dnsRefresh):
 			refreshDNS(targets, monitor)
 		}
 	}
@@ -123,34 +104,44 @@ func startServer(monitor *mon.Monitor) {
 			<head><title>CGW Exporter (Version ` + version + `)</title></head>
 			<body>
 			<h1>CGW Exporter</h1>
-			<p><a href="` + *metricsPath + `">Metrics</a></p>
+			<p><a href="` + metricsPath + `">Metrics</a></p>
 			</body>
 			</html>`))
 	})
 
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(pingDurationHistogram)
 	registry.MustRegister(&pingCollector{monitor: monitor})
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{
 		ErrorLog:      log.NewErrorLogger(),
 		ErrorHandling: promhttp.ContinueOnError})
-	http.HandleFunc(*metricsPath, h.ServeHTTP)
-	log.Infof("Listening for %s on %s", *metricsPath, *listenAddress)
-	log.Fatal(http.ListenAndServe(*listenAddress, nil))
+	http.HandleFunc(metricsPath, h.ServeHTTP)
+	log.Infof("Listening for %s on %s", metricsPath, listenAddress)
+	log.Fatal(http.ListenAndServe(listenAddress, nil))
 }
 
 func main() {
-    flag.Parse()
-    if *showVersion {
-        printVersion()
-        os.Exit(0)
-    }
+	flag.Parse()
 
-    m, err := startMonitor()
-    if err != nil {
-    	log.Errorln(err)
-    	os.Exit(2)
+	if *showVersion {
+		printVersion()
+		os.Exit(0)
 	}
-    startServer(m)
+
+	initConfig()
+	readInConfig()
+	updateConfig()
+
+	configSet, missingParameters := isMandatoryConfigSet()
+	if !configSet {
+		log.Errorln("configuration parameters", missingParameters, "missing")
+		os.Exit(3)
+	}
+
+	m, err := startMonitor()
+	if err != nil {
+		log.Errorln(err)
+		os.Exit(2)
+	}
+	startServer(m)
 }
