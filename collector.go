@@ -6,6 +6,7 @@ import (
 
 	mon "github.com/digineo/go-ping/monitor"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/imdario/mergo"
 )
 
 const prefix = "ping_"
@@ -22,7 +23,7 @@ var (
 )
 
 type pingCollector struct {
-	monitor *mon.Monitor
+	monitors []*mon.Monitor
 	metrics map[string]*mon.Metrics
 }
 
@@ -39,10 +40,16 @@ func (p *pingCollector) Collect(ch chan<- prometheus.Metric) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	metrics := p.monitor.ExportAndClear()
+	for _, m := range p.monitors {
+		metrics := m.ExportAndClear()
 
-	if len(metrics) > 0 {
-		p.metrics = metrics
+		if len(metrics) > 0 {
+			err := mergo.Merge(&p.metrics, metrics, mergo.WithOverride)
+			if err != nil {
+				panic(err)
+			}
+		}
+
 	}
 
 	if p.metrics == nil || len(p.metrics) == 0 {

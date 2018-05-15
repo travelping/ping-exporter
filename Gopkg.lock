@@ -61,6 +61,12 @@
   revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
+  name = "github.com/imdario/mergo"
+  packages = ["."]
+  revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
+  version = "v0.3.4"
+
+[[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
   revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
@@ -218,6 +224,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "52b6c6022648c165985a51ce5e6397fd93c9ce083c705c72a8817d34205a19d6"
+  inputs-digest = "0ad2b1ffa7532b4d6fd7c34adc2e3f65c34ea5c9b5f6f5560e0ed659539297cc"
   solver-name = "gps-cdcl"
   solver-version = 1

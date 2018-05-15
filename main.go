@@ -42,16 +42,16 @@ func printVersion() {
 	fmt.Println("Metric exporter for Travelping CGW")
 }
 
-func startMonitor() (*mon.Monitor, error) {
-	pinger, err := ping.New(pingSourceV4, pingSourceV6)
+func startMonitor(config PingConfig) (*mon.Monitor, error) {
+	pinger, err := ping.New(config.SourceV4, config.SourceV6)
 	if err != nil {
 		return nil, err
 	}
 
-	monitor := mon.New(pinger, pingInterval, pingTimeout)
+	monitor := mon.New(pinger, config.PingInterval, config.PingTimeout)
 
-	targets := make([]*target, len(pingTarget))
-	for i, host := range pingTarget {
+	targets := make([]*target, len(config.PingTargets))
+	for i, host := range config.PingTargets {
 		t := &target{
 			host:      host,
 			addresses: make([]net.IP, 0),
@@ -97,7 +97,7 @@ func refreshDNS(targets []*target, monitor *mon.Monitor) {
 	}
 }
 
-func startServer(monitor *mon.Monitor) {
+func startServer(monitor []*mon.Monitor) {
 	log.Infof("starting cgw exporter (Version: %s)", version)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
@@ -110,7 +110,7 @@ func startServer(monitor *mon.Monitor) {
 	})
 
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(&pingCollector{monitor: monitor})
+	registry.MustRegister(&pingCollector{monitors: monitor})
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{
 		ErrorLog:      log.NewErrorLogger(),
@@ -138,10 +138,27 @@ func main() {
 		os.Exit(3)
 	}
 
-	m, err := startMonitor()
-	if err != nil {
-		log.Errorln(err)
-		os.Exit(2)
+	var monitors []*mon.Monitor
+
+	if hasPingMultiConfig {
+		for _, c := range pingConfigurations {
+			m, err := startMonitor(c)
+			if err != nil {
+				log.Errorln(err)
+				os.Exit(2)
+			}
+			monitors = append(monitors, m)
+		}
+
+	} else {
+		target := PingConfig{pingSourceV4, pingSourceV6, pingTarget, pingInterval, pingTimeout}
+		m, err := startMonitor(target)
+		if err != nil {
+			log.Errorln(err)
+			os.Exit(2)
+		}
+		monitors = append(monitors, m)
 	}
-	startServer(m)
+
+	startServer(monitors)
 }

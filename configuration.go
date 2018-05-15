@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+    "github.com/prometheus/common/log"
 )
 
 var (
@@ -25,19 +26,31 @@ var (
 	pingTarget    []string
 	pingSourceV4  string
 	pingSourceV6  string
+	hasPingMultiConfig bool
+	pingConfigurations []PingConfig
 	dnsRefresh    time.Duration
 )
 
 var (
-	mandatoryConfig = [...]string{"web.listen-address", "ping.interval", "ping.timeout", "ping.source.ipv4", "ping.source.ipv6", "dns.refresh", "ping.target", "web.telemetry-path"}
-	optionalConfig  = [...]string{}
+	mandatoryConfig = [...]string{"web.listen-address", "ping.interval", "ping.timeout", "ping.source.ipv4", "ping.source.ipv6", "dns.refresh", "web.telemetry-path"}
+	optionalConfig  = [...]string{"ping.target"}
 )
+
+
+type PingConfig struct {
+	SourceV4 string // source address of ICMP requests
+	SourceV6 string // source address of ICMP requests
+	PingTargets []string // target addresses of ICMP requests
+	PingInterval time.Duration // interval between ICMP requests
+	PingTimeout time.Duration // timeout of ICMP requests
+}
 
 func initConfig() {
 	setDefaults()
 	viper.SetConfigName("cgw-exporter")
 	viper.AddConfigPath("/etc/defaults/cgw-exporter/")
 	viper.AddConfigPath("/etc/cgw-exporter/")
+	viper.AddConfigPath(".")
 	viper.SetConfigType("yaml")
 	viper.SetEnvPrefix("CGWEXPORTER")
 	replacer := strings.NewReplacer(".", "_")
@@ -55,7 +68,8 @@ func setDefaults() {
 	viper.SetDefault("dns.refresh", "1m")
 }
 
-func updateConfig() {
+func updateConfig() error {
+	//readInConfig()
 	listenAddress = viper.GetString("web.listen-address")
 	metricsPath = viper.GetString("web.telemetry-path")
 	pingInterval = viper.GetDuration("ping.interval")
@@ -64,6 +78,17 @@ func updateConfig() {
 	pingSourceV4 = viper.GetString("ping.source.ipv4")
 	pingSourceV6 = viper.GetString("ping.source.ipv6")
 	dnsRefresh = viper.GetDuration("dns.refresh")
+	if viper.IsSet("ping.configurations") {
+		hasPingMultiConfig = true
+		err := viper.UnmarshalKey("ping.configurations", &pingConfigurations)
+		if err != nil {
+			log.Fatalf("unable to decode into struct, %v", err)
+			return err
+		}
+	} else {
+		hasPingMultiConfig = false
+	}
+	return nil
 }
 
 func bindEnvVariables() {
@@ -86,6 +111,10 @@ func isMandatoryConfigSet() (bool, []string) {
 			allSet = false
 			missingConfig = append(missingConfig, element)
 		}
+	}
+	if !viper.IsSet("ping.target") && !viper.IsSet("ping.configurations") {
+		allSet = false
+		missingConfig = append(missingConfig, "ping.configurations", "ping.target")
 	}
 	return allSet, missingConfig
 }
