@@ -46,4 +46,32 @@ ping:
   - 192.0.2.2
 dns:
   refresh: "1m" # Interval for refreshing DNS records and updating targets accordingly (0 if disabled)
+```
   
+### multiple ping configurations
+
+As of version 0.2.0 it is also possible to use multiple configurations for the ping targets.
+One use case is use multiple source IP addresses.
+
+When `ping.configurations` is set, `ping.target`, `ping.source`, `ping.interval` and `ping.timeout` will not be evaluated and consequently also the corrensponding command line values will be ignored.
+
+Example configuration:
+
+```yaml
+ping:
+  configurations:
+    - sourceV4: 192.0.2.1          # Source address of ICMP requests
+      sourceV6: "2001:0DB8:1::1"   # Source address of ICMP requests
+      pingInterval: 5s             # interval for ICMP requests
+      pingTimeout: 4s              # timeout for ICMP requests
+      pingTargets:                 # list of ICMP targets
+        - 192.0.2.10
+        - 198.51.100.1
+    - sourceV4: 192.0.2.2
+      sourceV6: "2001:0DB8:2::2"
+      pingInterval: 5s
+      pingTimeout: 4s
+      pingTargets:
+        - 203.0.113.1
+        - "2001:0DB8:2::10"
+```
