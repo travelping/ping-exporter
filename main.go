@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const version string = "0.1.0"
+const version string = "0.2.0"
 
 var (
 	showVersion = flag.Bool("version", false, "Print version information")
@@ -56,6 +56,8 @@ func startMonitor(config PingConfig) (*mon.Monitor, error) {
 			host:      host,
 			addresses: make([]net.IP, 0),
 			delay:     time.Duration(10*i) * time.Millisecond,
+			sourceV4:  config.SourceV4,
+			sourceV6:  config.SourceV6,
 		}
 		targets[i] = t
 

@@ -4,9 +4,9 @@ import (
 	"github.com/spf13/viper"
 	//flag "github.com/spf13/pflag"
 	"fmt"
+	"github.com/prometheus/common/log"
 	"strings"
 	"time"
-    "github.com/prometheus/common/log"
 )
 
 var (
@@ -19,16 +19,16 @@ var (
 	//pingSourceV6  = flag.String("ping.source.ipv6", "::", "Source Address of ICMP echo requests")
 	//dnsRefresh    = flag.Duration("dns.refresh", time.Duration(1)*time.Minute, "Interval for refreshing DNS records and updating targets accordingly (0 if disabled)")
 
-	metricsPath   string
-	listenAddress string
-	pingInterval  time.Duration
-	pingTimeout   time.Duration
-	pingTarget    []string
-	pingSourceV4  string
-	pingSourceV6  string
+	metricsPath        string
+	listenAddress      string
+	pingInterval       time.Duration
+	pingTimeout        time.Duration
+	pingTarget         []string
+	pingSourceV4       string
+	pingSourceV6       string
 	hasPingMultiConfig bool
 	pingConfigurations []PingConfig
-	dnsRefresh    time.Duration
+	dnsRefresh         time.Duration
 )
 
 var (
@@ -36,13 +36,12 @@ var (
 	optionalConfig  = [...]string{"ping.target"}
 )
 
-
 type PingConfig struct {
-	SourceV4 string // source address of ICMP requests
-	SourceV6 string // source address of ICMP requests
-	PingTargets []string // target addresses of ICMP requests
+	SourceV4     string        // source address of ICMP requests
+	SourceV6     string        // source address of ICMP requests
+	PingTargets  []string      // target addresses of ICMP requests
 	PingInterval time.Duration // interval between ICMP requests
-	PingTimeout time.Duration // timeout of ICMP requests
+	PingTimeout  time.Duration // timeout of ICMP requests
 }
 
 func initConfig() {
@@ -121,7 +120,7 @@ func isMandatoryConfigSet() (bool, []string) {
 
 func readInConfig() {
 	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
+	if err != nil { // Handle errors reading the config file
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 

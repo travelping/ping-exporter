@@ -15,6 +15,8 @@ type target struct {
 	addresses []net.IP
 	delay     time.Duration
 	mutex     sync.Mutex
+	sourceV4  string
+	sourceV6  string
 }
 
 func (t *target) addOrUpdateMonitor(monitor *mon.Monitor) error {
@@ -67,9 +69,9 @@ func (t *target) nameForIP(addr net.IP) string {
 	name := fmt.Sprintf("%s %s ", t.host, addr)
 
 	if addr.To4() == nil {
-		name += "6"
+		name += fmt.Sprintf("6 %s", t.sourceV6)
 	} else {
-		name += "4"
+		name += fmt.Sprintf("4 %s", t.sourceV4)
 	}
 
 	return name

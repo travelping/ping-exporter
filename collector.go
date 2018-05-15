@@ -5,14 +5,14 @@ import (
 	"sync"
 
 	mon "github.com/digineo/go-ping/monitor"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/imdario/mergo"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const prefix = "ping_"
 
 var (
-	labelNames = []string{"target", "ip", "ip_version"}
+	labelNames = []string{"target", "ip", "ip_version", "source_ip"}
 	rttDesc    = prometheus.NewDesc(prefix+"rtt_ms", "Round trip time in millis (deprecated)", append(labelNames, "type"), nil)
 	bestDesc   = prometheus.NewDesc(prefix+"rtt_best_ms", "Best round trip time in millis", labelNames, nil)
 	worstDesc  = prometheus.NewDesc(prefix+"rtt_worst_ms", "Worst round trip time in millis", labelNames, nil)
@@ -24,7 +24,7 @@ var (
 
 type pingCollector struct {
 	monitors []*mon.Monitor
-	metrics map[string]*mon.Metrics
+	metrics  map[string]*mon.Metrics
 }
 
 func (p *pingCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -58,7 +58,7 @@ func (p *pingCollector) Collect(ch chan<- prometheus.Metric) {
 
 	for target, metrics := range p.metrics {
 		t := strings.Split(target, " ")
-		l := []string{t[0], t[1], t[2]}
+		l := []string{t[0], t[1], t[2], t[3]}
 
 		ch <- prometheus.MustNewConstMetric(rttDesc, prometheus.GaugeValue, float64(metrics.Best), append(l, "best")...)
 		ch <- prometheus.MustNewConstMetric(bestDesc, prometheus.GaugeValue, float64(metrics.Best), l...)
