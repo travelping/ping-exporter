@@ -9,16 +9,17 @@ import (
 	"time"
 )
 
-var (
-	//metricsPath   = flag.String("web.telemetry-path", "/metrics", "Path under which metrics will be exposed")
-	//listenAddress = flag.String("web.listen-address", ":9427", "Address on which to expose metrics and web interface")
-	//pingInterval  = flag.Duration("ping.interval", time.Duration(5)*time.Second, "Interval for ICMP echo requests")
-	//pingTimeout   = flag.Duration("ping.timeout", time.Duration(4)*time.Second, "Timeout for ICMP echo request")
-	//pingTarget    = flag.String("ping.target", "9.9.9.9", "IP address of target")
-	//pingSourceV4  = flag.String("ping.source.ipv4", "0.0.0.0", "Source Address of ICMP echo requests")
-	//pingSourceV6  = flag.String("ping.source.ipv6", "::", "Source Address of ICMP echo requests")
-	//dnsRefresh    = flag.Duration("dns.refresh", time.Duration(1)*time.Minute, "Interval for refreshing DNS records and updating targets accordingly (0 if disabled)")
-
+//var (
+//metricsPath   = flag.String("web.telemetry-path", "/metrics", "Path under which metrics will be exposed")
+//listenAddress = flag.String("web.listen-address", ":9427", "Address on which to expose metrics and web interface")
+//pingInterval  = flag.Duration("ping.interval", time.Duration(5)*time.Second, "Interval for ICMP echo requests")
+//pingTimeout   = flag.Duration("ping.timeout", time.Duration(4)*time.Second, "Timeout for ICMP echo request")
+//pingTarget    = flag.String("ping.target", "9.9.9.9", "IP address of target")
+//pingSourceV4  = flag.String("ping.source.ipv4", "0.0.0.0", "Source Address of ICMP echo requests")
+//pingSourceV6  = flag.String("ping.source.ipv6", "::", "Source Address of ICMP echo requests")
+//dnsRefresh    = flag.Duration("dns.refresh", time.Duration(1)*time.Minute, "Interval for refreshing DNS records and updating targets accordingly (0 if disabled)")
+//)
+type Configuration struct {
 	metricsPath        string
 	listenAddress      string
 	pingInterval       time.Duration
@@ -29,7 +30,7 @@ var (
 	hasPingMultiConfig bool
 	pingConfigurations []PingConfig
 	dnsRefresh         time.Duration
-)
+}
 
 var (
 	mandatoryConfig = [...]string{"web.listen-address", "ping.interval", "ping.timeout", "ping.source.ipv4", "ping.source.ipv6", "dns.refresh", "web.telemetry-path"}
@@ -44,83 +45,83 @@ type PingConfig struct {
 	PingTimeout  time.Duration // timeout of ICMP requests
 }
 
-func initConfig() {
-	setDefaults()
-	viper.SetConfigName("cgw-exporter")
-	viper.AddConfigPath("/etc/defaults/cgw-exporter/")
-	viper.AddConfigPath("/etc/cgw-exporter/")
-	viper.AddConfigPath(".")
-	viper.SetConfigType("yaml")
-	viper.SetEnvPrefix("CGWEXPORTER")
+func initViper(v *viper.Viper) {
+	setDefaults(v)
+	v.SetConfigName("cgw-exporter")
+	v.AddConfigPath("/etc/defaults/cgw-exporter/")
+	v.AddConfigPath("/etc/cgw-exporter/")
+	v.AddConfigPath(".")
+	v.SetConfigType("yaml")
+	v.SetEnvPrefix("CGWEXPORTER")
 	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
-	bindEnvVariables()
+	v.SetEnvKeyReplacer(replacer)
+	bindEnvVariables(v)
 }
 
-func setDefaults() {
-	viper.SetDefault("web.listen-address", ":9427")
-	viper.SetDefault("web.telemetry-path", "/metrics")
-	viper.SetDefault("ping.interval", "5s")
-	viper.SetDefault("ping.timeout", "4s")
-	viper.SetDefault("ping.source.ipv4", "0.0.0.0")
-	viper.SetDefault("ping.source.ipv6", "::")
-	viper.SetDefault("dns.refresh", "1m")
+func setDefaults(v *viper.Viper) {
+	v.SetDefault("web.listen-address", ":9427")
+	v.SetDefault("web.telemetry-path", "/metrics")
+	v.SetDefault("ping.interval", "5s")
+	v.SetDefault("ping.timeout", "4s")
+	v.SetDefault("ping.source.ipv4", "0.0.0.0")
+	v.SetDefault("ping.source.ipv6", "::")
+	v.SetDefault("dns.refresh", "1m")
 }
 
-func updateConfig() error {
+func (conf *Configuration) updateConfig(v *viper.Viper) error {
 	//readInConfig()
-	listenAddress = viper.GetString("web.listen-address")
-	metricsPath = viper.GetString("web.telemetry-path")
-	pingInterval = viper.GetDuration("ping.interval")
-	pingTimeout = viper.GetDuration("ping.timeout")
-	pingTarget = viper.GetStringSlice("ping.target")
-	pingSourceV4 = viper.GetString("ping.source.ipv4")
-	pingSourceV6 = viper.GetString("ping.source.ipv6")
-	dnsRefresh = viper.GetDuration("dns.refresh")
-	if viper.IsSet("ping.configurations") {
-		hasPingMultiConfig = true
-		err := viper.UnmarshalKey("ping.configurations", &pingConfigurations)
+	conf.listenAddress = v.GetString("web.listen-address")
+	conf.metricsPath = v.GetString("web.telemetry-path")
+	conf.pingInterval = v.GetDuration("ping.interval")
+	conf.pingTimeout = v.GetDuration("ping.timeout")
+	conf.pingTarget = v.GetStringSlice("ping.target")
+	conf.pingSourceV4 = v.GetString("ping.source.ipv4")
+	conf.pingSourceV6 = v.GetString("ping.source.ipv6")
+	conf.dnsRefresh = v.GetDuration("dns.refresh")
+	if v.IsSet("ping.configurations") {
+		conf.hasPingMultiConfig = true
+		err := v.UnmarshalKey("ping.configurations", &(conf.pingConfigurations))
 		if err != nil {
 			log.Fatalf("unable to decode into struct, %v", err)
 			return err
 		}
 	} else {
-		hasPingMultiConfig = false
+		conf.hasPingMultiConfig = false
 	}
 	return nil
 }
 
-func bindEnvVariables() {
+func bindEnvVariables(v *viper.Viper) {
 	//flag.Parse()
 	//viper.BindPFlags(flag.CommandLine)
 
 	for _, element := range mandatoryConfig {
-		viper.BindEnv(element)
+		v.BindEnv(element)
 	}
 	for _, element := range optionalConfig {
-		viper.BindEnv(element)
+		v.BindEnv(element)
 	}
 }
 
-func isMandatoryConfigSet() (bool, []string) {
+func isMandatoryConfigSet(v *viper.Viper) (bool, []string) {
 	allSet := true
 	var missingConfig []string
 	for _, element := range mandatoryConfig {
-		if !viper.IsSet(element) {
+		if !v.IsSet(element) {
 			allSet = false
 			missingConfig = append(missingConfig, element)
 		}
 	}
-	if !viper.IsSet("ping.target") && !viper.IsSet("ping.configurations") {
+	if !v.IsSet("ping.target") && !viper.IsSet("ping.configurations") {
 		allSet = false
 		missingConfig = append(missingConfig, "ping.configurations", "ping.target")
 	}
 	return allSet, missingConfig
 }
 
-func readInConfig() {
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil { // Handle errors reading the config file
+func readInConfig(v *viper.Viper) {
+	err := v.ReadInConfig() // Find and read the config file
+	if err != nil {         // Handle errors reading the config file
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 

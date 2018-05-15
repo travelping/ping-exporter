@@ -11,6 +11,7 @@ import (
 
 	mon "github.com/digineo/go-ping/monitor"
 	"github.com/prometheus/common/log"
+	"github.com/spf13/viper"
 	"net"
 	"time"
 )
@@ -42,7 +43,7 @@ func printVersion() {
 	fmt.Println("Metric exporter for Travelping CGW")
 }
 
-func startMonitor(config PingConfig) (*mon.Monitor, error) {
+func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, error) {
 	pinger, err := ping.New(config.SourceV4, config.SourceV6)
 	if err != nil {
 		return nil, err
@@ -67,13 +68,13 @@ func startMonitor(config PingConfig) (*mon.Monitor, error) {
 		}
 	}
 
-	go startDNSAutoRefresh(targets, monitor)
+	go startDNSAutoRefresh(dnsRefresh, targets, monitor)
 
 	return monitor, nil
 
 }
 
-func startDNSAutoRefresh(targets []*target, monitor *mon.Monitor) {
+func startDNSAutoRefresh(dnsRefresh time.Duration, targets []*target, monitor *mon.Monitor) {
 	if dnsRefresh == 0 {
 		return
 	}
@@ -99,7 +100,7 @@ func refreshDNS(targets []*target, monitor *mon.Monitor) {
 	}
 }
 
-func startServer(monitor []*mon.Monitor) {
+func startServer(monitor []*mon.Monitor, metricsPath string, listenAddress string) {
 	log.Infof("starting cgw exporter (Version: %s)", version)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
@@ -130,11 +131,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	initConfig()
-	readInConfig()
-	updateConfig()
+	config := Configuration{}
+	currentViper := viper.New()
 
-	configSet, missingParameters := isMandatoryConfigSet()
+	initViper(currentViper)
+	readInConfig(currentViper)
+	config.updateConfig(currentViper)
+
+	configSet, missingParameters := isMandatoryConfigSet(currentViper)
 	if !configSet {
 		log.Errorln("configuration parameters", missingParameters, "missing")
 		os.Exit(3)
@@ -142,9 +146,9 @@ func main() {
 
 	var monitors []*mon.Monitor
 
-	if hasPingMultiConfig {
-		for _, c := range pingConfigurations {
-			m, err := startMonitor(c)
+	if config.hasPingMultiConfig {
+		for _, c := range config.pingConfigurations {
+			m, err := startMonitor(c, config.dnsRefresh)
 			if err != nil {
 				log.Errorln(err)
 				os.Exit(2)
@@ -153,8 +157,8 @@ func main() {
 		}
 
 	} else {
-		target := PingConfig{pingSourceV4, pingSourceV6, pingTarget, pingInterval, pingTimeout}
-		m, err := startMonitor(target)
+		target := PingConfig{config.pingSourceV4, config.pingSourceV6, config.pingTarget, config.pingInterval, config.pingTimeout}
+		m, err := startMonitor(target, config.dnsRefresh)
 		if err != nil {
 			log.Errorln(err)
 			os.Exit(2)
@@ -162,5 +166,5 @@ func main() {
 		monitors = append(monitors, m)
 	}
 
-	startServer(monitors)
+	startServer(monitors, config.metricsPath, config.listenAddress)
 }
