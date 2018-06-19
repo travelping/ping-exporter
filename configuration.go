@@ -112,7 +112,7 @@ func isMandatoryConfigSet(v *viper.Viper) (bool, []string) {
 			missingConfig = append(missingConfig, element)
 		}
 	}
-	if !v.IsSet("ping.target") && !viper.IsSet("ping.configurations") {
+	if !v.IsSet("ping.target") && !v.IsSet("ping.configurations") {
 		allSet = false
 		missingConfig = append(missingConfig, "ping.configurations", "ping.target")
 	}

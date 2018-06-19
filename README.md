@@ -2,7 +2,14 @@
 
 This exporter provides metrics for the *CGW* service in the *prometheus* compatible format.
 
+## copyright
+
 It is orginally based on [ping_exporter](https://github.com/czerwonk/ping_exporter) by Daniel Czerwonk.
+
+> Copyright (c) 2018 Daniel Czerwonk
+> 
+> Copyright (c) 2018 Travelping GmbH
+
 
 ## configuration
 ### configuration formats
