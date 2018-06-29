@@ -47,12 +47,12 @@ type PingConfig struct {
 
 func initViper(v *viper.Viper) {
 	setDefaults(v)
-	v.SetConfigName("cgw-exporter")
-	v.AddConfigPath("/etc/defaults/cgw-exporter/")
-	v.AddConfigPath("/etc/cgw-exporter/")
+	v.SetConfigName("ping-exporter")
+	v.AddConfigPath("/etc/defaults/ping-exporter/")
+	v.AddConfigPath("/etc/ping-exporter/")
 	v.AddConfigPath(".")
 	v.SetConfigType("yaml")
-	v.SetEnvPrefix("CGWEXPORTER")
+	v.SetEnvPrefix("PINGEXPORTER")
 	replacer := strings.NewReplacer(".", "_")
 	v.SetEnvKeyReplacer(replacer)
 	bindEnvVariables(v)
