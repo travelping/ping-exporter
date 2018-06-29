@@ -1,6 +1,15 @@
 # Changelog
 
 ## pre v1.0.0
+
+### 0.3.0
+
+* move to github and change name from cgw-exporter to ping-exporter including configuration prefixes and paths
+
+### 0.2.1
+
+* fix error in configuration parsing
+
 ### 0.2.0
 Add feature of configuring multiple source and target address combinations for ICMP metrics
 using yaml configuration files.
