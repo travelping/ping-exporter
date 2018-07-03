@@ -2,6 +2,15 @@
 
 ## pre v1.0.0
 
+### 0.4.0
+
+* remove `/etc/defaults/ping-exporter/` search path, because just one
+  is used which should be `/etc/ping-exporter/`.
+
+### 0.3.1
+
+* clean up help text
+
 ### 0.3.0
 
 * move to github and change name from cgw-exporter to ping-exporter including configuration prefixes and paths

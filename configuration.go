@@ -48,7 +48,6 @@ type PingConfig struct {
 func initViper(v *viper.Viper) {
 	setDefaults(v)
 	v.SetConfigName("ping-exporter")
-	v.AddConfigPath("/etc/defaults/ping-exporter/")
 	v.AddConfigPath("/etc/ping-exporter/")
 	v.AddConfigPath(".")
 	v.SetConfigType("yaml")

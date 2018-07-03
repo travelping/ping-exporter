@@ -8,5 +8,5 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /go/src/github.com/travelping/ping-exporter/ping-exporter .
-RUN mkdir -p /etc/defaults/ping-exporter/ && touch /etc/defaults/ping-exporter/ping-exporter.yaml
+RUN mkdir -p /etc/ping-exporter/ && touch /etc/ping-exporter/ping-exporter.yaml
 CMD ["./ping-exporter"]
