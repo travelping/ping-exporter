@@ -15,25 +15,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 
-var (
-	showVersion = flag.Bool("version", false, "Print version information")
+	"github.com/spf13/pflag"
 )
 
 const version = "0.4.0"
 
 var (
-	uniformDomain = flag.Float64("uniform.domain", 0.0002, "The domain for the uniform distribution.")
-	normDomain    = flag.Float64("normal.domain", 0.0002, "The domain for the normal distribution.")
-	normMean      = flag.Float64("normal.mean", 0.00001, "The mean for the normal distribution.")
+	showHelp    = pflag.BoolP("help", "h", false, "Show usage")
+	showVersion = pflag.BoolP("version", "v", false, "Print version information")
+	configName  = pflag.StringP("config", "c", "/etc/ping-exporter/ping-exporter.yaml", "Config file to use")
 )
-
-func init() {
-	flag.Usage = func() {
-		fmt.Println("Usage:", os.Args[0], "-config.path=$my-config-file [options]")
-		fmt.Println()
-		flag.PrintDefaults()
-	}
-}
 
 func printVersion() {
 	fmt.Println("ping-exporter")
@@ -127,23 +118,26 @@ func startServer(monitor []*mon.Monitor, metricsPath string, listenAddress strin
 }
 
 func main() {
-	flag.Parse()
 
+	pflag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		pflag.PrintDefaults()
+	}
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
+
+	if *showHelp {
+		pflag.Usage()
+		os.Exit(0)
+	}
 	if *showVersion {
 		printVersion()
 		os.Exit(0)
 	}
 
-	config := Configuration{}
-	currentViper := viper.New()
-
-	initViper(currentViper)
-	readInConfig(currentViper)
-	config.updateConfig(currentViper)
-
-	configSet, missingParameters := isMandatoryConfigSet(currentViper)
-	if !configSet {
-		log.Errorln("configuration parameters", missingParameters, "missing")
+	config, err := newConfiguration(pflag.CommandLine)
+	if err != nil {
+		log.Errorln(err)
 		os.Exit(3)
 	}
 
