@@ -36,10 +36,9 @@ func init() {
 }
 
 func printVersion() {
-	fmt.Println("cgw-exporter")
+	fmt.Println("ping-exporter")
 	fmt.Printf("Version: %s\n", version)
 	fmt.Println("Author(s): Tobias Famulla")
-	fmt.Println("ping exporter")
 }
 
 func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, error) {
