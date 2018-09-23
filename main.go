@@ -3,24 +3,23 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/digineo/go-ping"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net"
 	"net/http"
 	"os"
-
-	mon "github.com/digineo/go-ping/monitor"
-	"github.com/prometheus/common/log"
-	"github.com/spf13/viper"
-	"net"
 	"time"
-)
 
-const version string = "0.4.0"
+	ping "github.com/digineo/go-ping"
+	mon "github.com/digineo/go-ping/monitor"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/log"
 
 var (
 	showVersion = flag.Bool("version", false, "Print version information")
 )
+
+const version = "0.4.0"
 
 var (
 	uniformDomain = flag.Float64("uniform.domain", 0.0002, "The domain for the uniform distribution.")

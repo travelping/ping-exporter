@@ -1,12 +1,14 @@
 package main
 
 import (
-	"github.com/spf13/viper"
-	//flag "github.com/spf13/pflag"
 	"fmt"
-	"github.com/prometheus/common/log"
 	"strings"
 	"time"
+
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+
+	"github.com/prometheus/common/log"
 )
 
 //var (
