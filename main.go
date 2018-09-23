@@ -147,21 +147,15 @@ func main() {
 		os.Exit(3)
 	}
 
-	var monitors []*mon.Monitor
-
-	if config.hasPingMultiConfig {
-		for _, c := range config.pingConfigurations {
-			m, err := startMonitor(c, config.dnsRefresh)
-			if err != nil {
-				log.Errorln(err)
-				os.Exit(2)
-			}
-			monitors = append(monitors, m)
+	if !config.hasPingMultiConfig {
+		config.pingConfigurations = []PingConfig{
+			PingConfig{config.pingSourceV4, config.pingSourceV6, config.pingTarget, config.pingInterval, config.pingTimeout},
 		}
+	}
 
-	} else {
-		target := PingConfig{config.pingSourceV4, config.pingSourceV6, config.pingTarget, config.pingInterval, config.pingTimeout}
-		m, err := startMonitor(target, config.dnsRefresh)
+	var monitors []*mon.Monitor
+	for _, c := range config.pingConfigurations {
+		m, err := startMonitor(c, config.dnsRefresh)
 		if err != nil {
 			log.Errorln(err)
 			os.Exit(2)
