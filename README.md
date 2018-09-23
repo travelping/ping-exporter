@@ -1,15 +1,18 @@
 # Ping-Exporter
 
-This exporter provides metrics for ICMP Echo requests in the *prometheus* compatible format.
+This exporter provides metrics for ICMP Echo requests in the *prometheus*
+compatible format.
 
-## copyright
+## Copyright
 
-It is orginally based on [ping_exporter](https://github.com/czerwonk/ping_exporter) by Daniel Czerwonk.
+It is orginally based on
+[ping_exporter](https://github.com/czerwonk/ping_exporter) by Daniel Czerwonk.
 
-## configuration
-### configuration formats
+## Configuration
+### Configuration formats
 
-The configuration can either be set using `yaml` as a format or environmental variables.
+The configuration can either be set using `yaml` as a format or environmental
+variables.
 
 For configurations in yaml like:
 
@@ -19,17 +22,20 @@ layer1:
     layer3: true
 ```
 
-The value key would be called `layer1.layer2.layer3` with the value `true` when mentioned in this documentation.
-To use *environmental variables* for configuration, the key translates to `PINGEXPORTER_LAYER1_LAYER2_LAYER3`.
+The value key would be called `layer1.layer2.layer3` with the value `true`
+when mentioned in this documentation. To use *environmental variables* for
+configuration, the key translates to `PINGEXPORTER_LAYER1_LAYER2_LAYER3`.
 So every `.` will be replaced by `_` and the name will be all caps.
 
-Further list items will be seperated by space, e.g. `PINGEXPORTER_TARGET="192.0.2.1 192.0.2.2"`
+Further list items will be seperated by space, e.g.
+`PINGEXPORTER_TARGET="192.0.2.1 192.0.2.2"`
 
-The configuration in `yaml` format has to be saved under `/etc/ping-exporter/ping-exporter.yaml` as of now.
-The priority of environmental variables is higher than the one of the configuration file and 
-therefore will override the values.
+The configuration in `yaml` format has to be saved under
+`/etc/ping-exporter/ping-exporter.yaml` as of now.
+The priority of environmental variables is higher than the one of the
+configuration file and therefore will override the values.
 
-### configuration parameters
+### Configuration parameters
 
 The following configuration parameters are available so far:
 
@@ -50,12 +56,14 @@ dns:
   refresh: "1m" # Interval for refreshing DNS records and updating targets accordingly (0 if disabled)
 ```
   
-### multiple ping configurations
+### Multiple ping configurations
 
-As of version 0.2.0 it is also possible to use multiple configurations for the ping targets.
-One use case is use multiple source IP addresses.
+As of version 0.2.0 it is also possible to use multiple configurations for the
+ping targets. One use case is use multiple source IP addresses.
 
-When `ping.configurations` is set, `ping.target`, `ping.source`, `ping.interval` and `ping.timeout` will not be evaluated and consequently also the corrensponding command line values will be ignored.
+When `ping.configurations` is set, `ping.target`, `ping.source`,
+`ping.interval` and `ping.timeout` will not be evaluated and consequently
+also the corrensponding command line values will be ignored.
 
 Example configuration:
 
