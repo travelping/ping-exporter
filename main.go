@@ -99,15 +99,20 @@ func refreshDNS(targets []*pingTarget, monitor *mon.Monitor) {
 }
 
 func startServer(monitor []*mon.Monitor, metricsPath string, listenAddress string) {
-	log.Infof("starting cgw exporter (Version: %s)", version)
+
+	log.Infof("starting ping-exporter (Version: %s)", version)
+
+	infoPage := []byte(`<!doctype html>
+	<html>
+		<head><title>PING Exporter (Version ` + version + `)</title></head>
+		<body>
+		<h1>PING Exporter</h1>
+		<p><a href="` + metricsPath + `">Metrics</a></p>
+		</body>
+	</html>`)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
-			<head><title>CGW Exporter (Version ` + version + `)</title></head>
-			<body>
-			<h1>CGW Exporter</h1>
-			<p><a href="` + metricsPath + `">Metrics</a></p>
-			</body>
-			</html>`))
+		w.Write(infoPage)
 	})
 
 	registry := prometheus.NewRegistry()
