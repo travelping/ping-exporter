@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/common/log"
 )
 
-type target struct {
+type pingTarget struct {
 	host      string
 	addresses []net.IP
 	delay     time.Duration
@@ -19,7 +19,7 @@ type target struct {
 	sourceV6  string
 }
 
-func (t *target) addOrUpdateMonitor(monitor *mon.Monitor) error {
+func (t *pingTarget) addOrUpdateMonitor(monitor *mon.Monitor) error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -41,7 +41,7 @@ func (t *target) addOrUpdateMonitor(monitor *mon.Monitor) error {
 	return nil
 }
 
-func (t *target) addIfNew(addr net.IP, monitor *mon.Monitor) error {
+func (t *pingTarget) addIfNew(addr net.IP, monitor *mon.Monitor) error {
 	if isIPInSlice(addr, t.addresses) {
 		return nil
 	}
@@ -49,7 +49,7 @@ func (t *target) addIfNew(addr net.IP, monitor *mon.Monitor) error {
 	return t.add(addr, monitor)
 }
 
-func (t *target) cleanUp(new []net.IP, monitor *mon.Monitor) {
+func (t *pingTarget) cleanUp(new []net.IP, monitor *mon.Monitor) {
 	for _, o := range t.addresses {
 		if !isIPInSlice(o, new) {
 			name := t.nameForIP(o)
@@ -59,13 +59,13 @@ func (t *target) cleanUp(new []net.IP, monitor *mon.Monitor) {
 	}
 }
 
-func (t *target) add(addr net.IP, monitor *mon.Monitor) error {
+func (t *pingTarget) add(addr net.IP, monitor *mon.Monitor) error {
 	name := t.nameForIP(addr)
 	log.Infof("adding target for host %s (%v)", t.host, addr)
 	return monitor.AddTargetDelayed(name, net.IPAddr{IP: addr, Zone: ""}, t.delay)
 }
 
-func (t *target) nameForIP(addr net.IP) string {
+func (t *pingTarget) nameForIP(addr net.IP) string {
 	name := fmt.Sprintf("%s %s ", t.host, addr)
 
 	if addr.To4() == nil {
@@ -83,6 +83,5 @@ func isIPInSlice(ip net.IP, slice []net.IP) bool {
 			return true
 		}
 	}
-
 	return false
 }

@@ -49,17 +49,17 @@ func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, er
 	}
 
 	monitor := mon.New(pinger, config.PingInterval, config.PingTimeout)
+	targets := []*pingTarget(nil)
 
-	targets := make([]*target, len(config.PingTargets))
 	for i, host := range config.PingTargets {
-		t := &target{
+		t := &pingTarget{
 			host:      host,
 			addresses: make([]net.IP, 0),
 			delay:     time.Duration(10*i) * time.Millisecond,
 			sourceV4:  config.SourceV4,
 			sourceV6:  config.SourceV6,
 		}
-		targets[i] = t
+		targets = append(targets, t)
 
 		err := t.addOrUpdateMonitor(monitor)
 		if err != nil {
@@ -73,7 +73,7 @@ func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, er
 
 }
 
-func startDNSAutoRefresh(dnsRefresh time.Duration, targets []*target, monitor *mon.Monitor) {
+func startDNSAutoRefresh(dnsRefresh time.Duration, targets []*pingTarget, monitor *mon.Monitor) {
 	if dnsRefresh == 0 {
 		return
 	}
@@ -86,11 +86,11 @@ func startDNSAutoRefresh(dnsRefresh time.Duration, targets []*target, monitor *m
 	}
 }
 
-func refreshDNS(targets []*target, monitor *mon.Monitor) {
+func refreshDNS(targets []*pingTarget, monitor *mon.Monitor) {
 	for _, t := range targets {
 		log.Infof("refreshing DNS")
 
-		go func(ta *target) {
+		go func(ta *pingTarget) {
 			err := ta.addOrUpdateMonitor(monitor)
 			if err != nil {
 				log.Errorf("could refresh dns: %v", err)
