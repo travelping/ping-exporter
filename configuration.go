@@ -1,12 +1,14 @@
 package main
 
 import (
-	"github.com/spf13/viper"
-	//flag "github.com/spf13/pflag"
 	"fmt"
-	"github.com/prometheus/common/log"
 	"strings"
 	"time"
+
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+
+	"github.com/prometheus/common/log"
 )
 
 //var (
@@ -45,15 +47,13 @@ type PingConfig struct {
 	PingTimeout  time.Duration // timeout of ICMP requests
 }
 
-func initViper(v *viper.Viper) {
+func initConfig(v *viper.Viper, flags *pflag.FlagSet) {
 	setDefaults(v)
-	v.SetConfigName("ping-exporter")
-	v.AddConfigPath("/etc/ping-exporter/")
-	v.AddConfigPath(".")
-	v.SetConfigType("yaml")
+
+	v.BindPFlags(flags)
+
 	v.SetEnvPrefix("PINGEXPORTER")
-	replacer := strings.NewReplacer(".", "_")
-	v.SetEnvKeyReplacer(replacer)
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	bindEnvVariables(v)
 }
 
@@ -67,8 +67,29 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("dns.refresh", "1m")
 }
 
-func (conf *Configuration) updateConfig(v *viper.Viper) error {
-	//readInConfig()
+func newConfiguration(flags *pflag.FlagSet) (*Configuration, error) {
+	v := viper.GetViper()
+	initConfig(v, flags)
+
+	cfile, _ := flags.GetString("config")
+	if cfile != "" {
+		v.SetConfigFile(cfile)
+		if err := v.ReadInConfig(); err != nil {
+			return nil, err
+		}
+	}
+
+	config, err := (new(Configuration)).updateConfig(v)
+	if err != nil {
+		return nil, err
+	}
+	if valid, missing := isMandatoryConfigSet(v); !valid {
+		err = fmt.Errorf("configuration parameters", missing, "missing")
+	}
+	return config, err
+}
+
+func (conf *Configuration) updateConfig(v *viper.Viper) (*Configuration, error) {
 	conf.listenAddress = v.GetString("web.listen-address")
 	conf.metricsPath = v.GetString("web.telemetry-path")
 	conf.pingInterval = v.GetDuration("ping.interval")
@@ -82,18 +103,15 @@ func (conf *Configuration) updateConfig(v *viper.Viper) error {
 		err := v.UnmarshalKey("ping.configurations", &(conf.pingConfigurations))
 		if err != nil {
 			log.Fatalf("unable to decode into struct, %v", err)
-			return err
+			return nil, err
 		}
 	} else {
 		conf.hasPingMultiConfig = false
 	}
-	return nil
+	return conf, nil
 }
 
 func bindEnvVariables(v *viper.Viper) {
-	//flag.Parse()
-	//viper.BindPFlags(flag.CommandLine)
-
 	for _, element := range mandatoryConfig {
 		v.BindEnv(element)
 	}
@@ -117,21 +135,3 @@ func isMandatoryConfigSet(v *viper.Viper) (bool, []string) {
 	}
 	return allSet, missingConfig
 }
-
-func readInConfig(v *viper.Viper) {
-	err := v.ReadInConfig() // Find and read the config file
-	if err != nil {         // Handle errors reading the config file
-		panic(fmt.Errorf("Fatal error config file: %s \n", err))
-	}
-
-}
-
-/*
-func main() {
-	initConfig()
-	updateConfig()
-	fmt.Println(viper.IsSet("ping.target"))
-	for _, element := range pingTarget {
-		fmt.Println(element)
-	}
-}*/

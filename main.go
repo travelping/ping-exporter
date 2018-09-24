@@ -3,44 +3,33 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/digineo/go-ping"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net"
 	"net/http"
 	"os"
-
-	mon "github.com/digineo/go-ping/monitor"
-	"github.com/prometheus/common/log"
-	"github.com/spf13/viper"
-	"net"
 	"time"
+
+	ping "github.com/digineo/go-ping"
+	mon "github.com/digineo/go-ping/monitor"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/log"
+
+	"github.com/spf13/pflag"
 )
 
-const version string = "0.4.0"
+const version = "0.4.0"
 
 var (
-	showVersion = flag.Bool("version", false, "Print version information")
+	showHelp    = pflag.BoolP("help", "h", false, "Show usage")
+	showVersion = pflag.BoolP("version", "v", false, "Print version information")
+	configName  = pflag.StringP("config", "c", "/etc/ping-exporter/ping-exporter.yaml", "Config file to use")
 )
-
-var (
-	uniformDomain = flag.Float64("uniform.domain", 0.0002, "The domain for the uniform distribution.")
-	normDomain    = flag.Float64("normal.domain", 0.0002, "The domain for the normal distribution.")
-	normMean      = flag.Float64("normal.mean", 0.00001, "The mean for the normal distribution.")
-)
-
-func init() {
-	flag.Usage = func() {
-		fmt.Println("Usage:", os.Args[0], "-config.path=$my-config-file [options]")
-		fmt.Println()
-		flag.PrintDefaults()
-	}
-}
 
 func printVersion() {
-	fmt.Println("cgw-exporter")
+	fmt.Println("ping-exporter")
 	fmt.Printf("Version: %s\n", version)
 	fmt.Println("Author(s): Tobias Famulla")
-	fmt.Println("ping exporter")
 }
 
 func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, error) {
@@ -50,17 +39,17 @@ func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, er
 	}
 
 	monitor := mon.New(pinger, config.PingInterval, config.PingTimeout)
+	targets := []*pingTarget(nil)
 
-	targets := make([]*target, len(config.PingTargets))
 	for i, host := range config.PingTargets {
-		t := &target{
+		t := &pingTarget{
 			host:      host,
 			addresses: make([]net.IP, 0),
 			delay:     time.Duration(10*i) * time.Millisecond,
 			sourceV4:  config.SourceV4,
 			sourceV6:  config.SourceV6,
 		}
-		targets[i] = t
+		targets = append(targets, t)
 
 		err := t.addOrUpdateMonitor(monitor)
 		if err != nil {
@@ -74,7 +63,7 @@ func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, er
 
 }
 
-func startDNSAutoRefresh(dnsRefresh time.Duration, targets []*target, monitor *mon.Monitor) {
+func startDNSAutoRefresh(dnsRefresh time.Duration, targets []*pingTarget, monitor *mon.Monitor) {
 	if dnsRefresh == 0 {
 		return
 	}
@@ -87,11 +76,11 @@ func startDNSAutoRefresh(dnsRefresh time.Duration, targets []*target, monitor *m
 	}
 }
 
-func refreshDNS(targets []*target, monitor *mon.Monitor) {
+func refreshDNS(targets []*pingTarget, monitor *mon.Monitor) {
 	for _, t := range targets {
 		log.Infof("refreshing DNS")
 
-		go func(ta *target) {
+		go func(ta *pingTarget) {
 			err := ta.addOrUpdateMonitor(monitor)
 			if err != nil {
 				log.Errorf("could refresh dns: %v", err)
@@ -101,15 +90,20 @@ func refreshDNS(targets []*target, monitor *mon.Monitor) {
 }
 
 func startServer(monitor []*mon.Monitor, metricsPath string, listenAddress string) {
-	log.Infof("starting cgw exporter (Version: %s)", version)
+
+	log.Infof("starting ping-exporter (Version: %s)", version)
+
+	infoPage := []byte(`<!doctype html>
+	<html>
+		<head><title>PING Exporter (Version ` + version + `)</title></head>
+		<body>
+		<h1>PING Exporter</h1>
+		<p><a href="` + metricsPath + `">Metrics</a></p>
+		</body>
+	</html>`)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
-			<head><title>CGW Exporter (Version ` + version + `)</title></head>
-			<body>
-			<h1>CGW Exporter</h1>
-			<p><a href="` + metricsPath + `">Metrics</a></p>
-			</body>
-			</html>`))
+		w.Write(infoPage)
 	})
 
 	registry := prometheus.NewRegistry()
@@ -124,41 +118,38 @@ func startServer(monitor []*mon.Monitor, metricsPath string, listenAddress strin
 }
 
 func main() {
-	flag.Parse()
 
+	pflag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		pflag.PrintDefaults()
+	}
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
+
+	if *showHelp {
+		pflag.Usage()
+		os.Exit(0)
+	}
 	if *showVersion {
 		printVersion()
 		os.Exit(0)
 	}
 
-	config := Configuration{}
-	currentViper := viper.New()
-
-	initViper(currentViper)
-	readInConfig(currentViper)
-	config.updateConfig(currentViper)
-
-	configSet, missingParameters := isMandatoryConfigSet(currentViper)
-	if !configSet {
-		log.Errorln("configuration parameters", missingParameters, "missing")
+	config, err := newConfiguration(pflag.CommandLine)
+	if err != nil {
+		log.Errorln(err)
 		os.Exit(3)
 	}
 
-	var monitors []*mon.Monitor
-
-	if config.hasPingMultiConfig {
-		for _, c := range config.pingConfigurations {
-			m, err := startMonitor(c, config.dnsRefresh)
-			if err != nil {
-				log.Errorln(err)
-				os.Exit(2)
-			}
-			monitors = append(monitors, m)
+	if !config.hasPingMultiConfig {
+		config.pingConfigurations = []PingConfig{
+			PingConfig{config.pingSourceV4, config.pingSourceV6, config.pingTarget, config.pingInterval, config.pingTimeout},
 		}
+	}
 
-	} else {
-		target := PingConfig{config.pingSourceV4, config.pingSourceV6, config.pingTarget, config.pingInterval, config.pingTimeout}
-		m, err := startMonitor(target, config.dnsRefresh)
+	var monitors []*mon.Monitor
+	for _, c := range config.pingConfigurations {
+		m, err := startMonitor(c, config.dnsRefresh)
 		if err != nil {
 			log.Errorln(err)
 			os.Exit(2)
