@@ -2,6 +2,14 @@
 
 ## pre v1.0.0
 
+### 0.5.0
+
+* CLI: provide -h, -v and -c <config-file>
+* CLI: remove unused flags --uniform.domain, --norm.domain, --normal.mean
+* Docker: contain org.label-schema labels
+* Docker: use Alpine-3.8
+* Docker: do not create an empty `/etc/ping-exporter/ping-exporter.yaml`
+
 ### 0.4.0
 
 * remove `/etc/defaults/ping-exporter/` search path, because just one
@@ -13,16 +21,19 @@
 
 ### 0.3.0
 
-* move to github and change name from cgw-exporter to ping-exporter including configuration prefixes and paths
+* move to Github and change name from *cgw-exporter* to *ping-exporter* including
+  configuration prefixes and paths
 
 ### 0.2.1
 
 * fix error in configuration parsing
 
 ### 0.2.0
-Add feature of configuring multiple source and target address combinations for ICMP metrics
-using yaml configuration files.
+
+Add feature of configuring multiple source and target address combinations for
+ICMP metrics using yaml configuration files.
 
 ### 0.1.0
-Initial working prototype of *cgw-exporter* with feature of icmp metrics with single source address
-and multiple target addresses
+
+Initial working prototype of *cgw-exporter* with feature of ICMP metrics with
+single source address and multiple target addresses
