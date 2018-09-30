@@ -1,5 +1,5 @@
-ping-exporter: force vendor
-	go build -v
+ping-exporter: vendor
+	go build -v -o $@
 
 # fetch dependencies as defined via Gopkg.{toml,lock}
 vendor:
@@ -8,4 +8,4 @@ vendor:
 build-docker-image:
 	docker build -f Dockerfile -t travelping/ping-exporter:latest .
 
-.PHONY: force
+.PHONY: ping-exporter
