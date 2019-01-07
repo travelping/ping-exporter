@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const version = "0.4.0"
+const version = "0.5.1"
 
 var (
 	showHelp    = pflag.BoolP("help", "h", false, "Show usage")
@@ -135,7 +135,17 @@ func main() {
 		os.Exit(0)
 	}
 
-	config, err := newConfiguration(pflag.CommandLine)
+	var flags *pflag.FlagSet
+	flags = pflag.CommandLine
+
+	if flags.Changed("config") {
+		if _, err := os.Stat(*configName); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Configuration file does not exist:%s\n", *configName)
+			os.Exit(4)
+		}
+	}
+
+	config, err := newConfiguration(flags)
 	if err != nil {
 		log.Errorln(err)
 		os.Exit(3)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -73,9 +74,11 @@ func newConfiguration(flags *pflag.FlagSet) (*Configuration, error) {
 
 	cfile, _ := flags.GetString("config")
 	if cfile != "" {
-		v.SetConfigFile(cfile)
-		if err := v.ReadInConfig(); err != nil {
-			return nil, err
+		if _, err := os.Stat(cfile); !os.IsNotExist(err) {
+			v.SetConfigFile(cfile)
+			if err := v.ReadInConfig(); err != nil {
+				return nil, err
+			}
 		}
 	}
 
