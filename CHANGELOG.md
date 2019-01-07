@@ -2,6 +2,17 @@
 
 ## pre v1.0.0
 
+### 0.5.1
+
+* fix problem with missing configuration file
+  * if the default configuration file is used, it is assumed, that
+    configuration with environmental variables and command line
+    parameters is still possible.
+  * now if the default configuration file is missing, it will not throw
+    an error but just use env vars and cli parameters.
+  * if a config file path is given via cli parameter and is missing
+    the program will exit with an error.
+
 ### 0.5.0
 
 * CLI: provide -h, -v and -c <config-file>
