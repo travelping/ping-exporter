@@ -26,28 +26,44 @@ var (
 	configName  = pflag.StringP("config", "c", "/etc/ping-exporter/ping-exporter.yaml", "Config file to use")
 )
 
+type pingMonitor struct {
+	monitor *mon.Monitor
+	targets *[]*pingTarget
+}
+
 func printVersion() {
 	fmt.Println("ping-exporter")
 	fmt.Printf("Version: %s\n", version)
 	fmt.Println("Author(s): Tobias Famulla")
 }
 
-func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, error) {
+func convMapToPairList(m map[string]string) []keyValuePair {
+	l := []keyValuePair{}
+	for k, v := range m {
+		pair := keyValuePair{k, v}
+		l = append(l, pair)
+	}
+	return l
+}
+
+func startMonitor(config pingConfig, dnsRefresh time.Duration) (*mon.Monitor, *[]*pingTarget, error) {
 	pinger, err := ping.New(config.SourceV4, config.SourceV6)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	monitor := mon.New(pinger, config.PingInterval, config.PingTimeout)
 	targets := []*pingTarget(nil)
 
-	for i, host := range config.PingTargets {
+	for i, target := range config.PingTargets {
 		t := &pingTarget{
-			host:      host,
-			addresses: make([]net.IP, 0),
-			delay:     time.Duration(10*i) * time.Millisecond,
-			sourceV4:  config.SourceV4,
-			sourceV6:  config.SourceV6,
+			host:         target.PingTarget,
+			addresses:    make([]net.IP, 0),
+			delay:        time.Duration(10*i) * time.Millisecond,
+			sourceV4:     config.SourceV4,
+			sourceV6:     config.SourceV6,
+			targetLabels: convMapToPairList(target.TargetLabels),
+			sourceLabels: convMapToPairList(config.SourceLabels),
 		}
 		targets = append(targets, t)
 
@@ -59,7 +75,7 @@ func startMonitor(config PingConfig, dnsRefresh time.Duration) (*mon.Monitor, er
 
 	go startDNSAutoRefresh(dnsRefresh, targets, monitor)
 
-	return monitor, nil
+	return monitor, &targets, nil
 
 }
 
@@ -89,7 +105,7 @@ func refreshDNS(targets []*pingTarget, monitor *mon.Monitor) {
 	}
 }
 
-func startServer(monitor []*mon.Monitor, metricsPath string, listenAddress string) {
+func startServer(pingMonitors []*pingMonitor, metricsPath string, listenAddress string) {
 
 	log.Infof("starting ping-exporter (Version: %s)", version)
 
@@ -107,7 +123,7 @@ func startServer(monitor []*mon.Monitor, metricsPath string, listenAddress strin
 	})
 
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(&pingCollector{monitors: monitor})
+	registry.MustRegister(&pingCollector{pingMonitors: pingMonitors})
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{
 		ErrorLog:      log.NewErrorLogger(),
@@ -152,20 +168,26 @@ func main() {
 	}
 
 	if !config.hasPingMultiConfig {
-		config.pingConfigurations = []PingConfig{
-			PingConfig{config.pingSourceV4, config.pingSourceV6, config.pingTarget, config.pingInterval, config.pingTimeout},
+		targets := []pingTargetConfig{}
+		for _, t := range config.pingTarget {
+			target := pingTargetConfig{t, map[string]string{}}
+			targets = append(targets, target)
+		}
+		sourceLabels := map[string]string{}
+		config.pingConfigurations = []pingConfig{
+			pingConfig{config.pingSourceV4, config.pingSourceV6, sourceLabels, targets, config.pingInterval, config.pingTimeout},
 		}
 	}
 
-	var monitors []*mon.Monitor
+	var pingMonitors []*pingMonitor
 	for _, c := range config.pingConfigurations {
-		m, err := startMonitor(c, config.dnsRefresh)
+		monitor, targets, err := startMonitor(c, config.dnsRefresh)
 		if err != nil {
 			log.Errorln(err)
 			os.Exit(2)
 		}
-		monitors = append(monitors, m)
+		pingMonitors = append(pingMonitors, &pingMonitor{monitor, targets})
 	}
 
-	startServer(monitors, config.metricsPath, config.listenAddress)
+	startServer(pingMonitors, config.metricsPath, config.listenAddress)
 }

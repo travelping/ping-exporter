@@ -31,7 +31,7 @@ type Configuration struct {
 	pingSourceV4       string
 	pingSourceV6       string
 	hasPingMultiConfig bool
-	pingConfigurations []PingConfig
+	pingConfigurations []pingConfig
 	dnsRefresh         time.Duration
 }
 
@@ -40,12 +40,18 @@ var (
 	optionalConfig  = [...]string{"ping.target"}
 )
 
-type PingConfig struct {
-	SourceV4     string        // source address of ICMP requests
-	SourceV6     string        // source address of ICMP requests
-	PingTargets  []string      // target addresses of ICMP requests
-	PingInterval time.Duration // interval between ICMP requests
-	PingTimeout  time.Duration // timeout of ICMP requests
+type pingConfig struct {
+	SourceV4     string             // source address of ICMP requests
+	SourceV6     string             // source address of ICMP requests
+	SourceLabels map[string]string  //labels for source addresses
+	PingTargets  []pingTargetConfig // target addresses of ICMP requests
+	PingInterval time.Duration      // interval between ICMP requests
+	PingTimeout  time.Duration      // timeout of ICMP requests
+}
+
+type pingTargetConfig struct {
+	PingTarget   string            // destination IP address
+	TargetLabels map[string]string // labels for for targets to export to metrics
 }
 
 func initConfig(v *viper.Viper, flags *pflag.FlagSet) {

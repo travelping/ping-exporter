@@ -11,12 +11,19 @@ import (
 )
 
 type pingTarget struct {
-	host      string
-	addresses []net.IP
-	delay     time.Duration
-	mutex     sync.Mutex
-	sourceV4  string
-	sourceV6  string
+	host         string
+	addresses    []net.IP
+	delay        time.Duration
+	mutex        sync.Mutex
+	sourceV4     string
+	sourceV6     string
+	sourceLabels []keyValuePair
+	targetLabels []keyValuePair
+}
+
+type keyValuePair struct {
+	key   string
+	value string
 }
 
 func (t *pingTarget) addOrUpdateMonitor(monitor *mon.Monitor) error {
