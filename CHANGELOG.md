@@ -2,6 +2,16 @@
 
 ## pre v1.0.0
 
+### 0.6.0
+
+* [breaking] add labels for source and target
+  * labels for the source and destinations can be set
+    to be added in the resulting metrics
+  * the configuration for multiple sources has therefore changed
+* [breaking] start versioning of configuration file
+  * the configuration has to contain a version number to ensure backward compatibility
+    in the future
+
 ### 0.5.1
 
 * fix problem with missing configuration file
