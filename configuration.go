@@ -23,6 +23,7 @@ import (
 //dnsRefresh    = flag.Duration("dns.refresh", time.Duration(1)*time.Minute, "Interval for refreshing DNS records and updating targets accordingly (0 if disabled)")
 //)
 type Configuration struct {
+	version            string
 	metricsPath        string
 	listenAddress      string
 	pingInterval       time.Duration
@@ -107,6 +108,7 @@ func (conf *Configuration) updateConfig(v *viper.Viper) (*Configuration, error) 
 	conf.pingSourceV4 = v.GetString("ping.source.ipv4")
 	conf.pingSourceV6 = v.GetString("ping.source.ipv6")
 	conf.dnsRefresh = v.GetDuration("dns.refresh")
+	conf.version = v.GetString("version")
 	if v.IsSet("ping.configurations") {
 		conf.hasPingMultiConfig = true
 		err := v.UnmarshalKey("ping.configurations", &(conf.pingConfigurations))

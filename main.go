@@ -15,10 +15,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 
+	"github.com/mcuadros/go-version"
 	"github.com/spf13/pflag"
 )
 
-const version = "0.5.1"
+const prog_version = "0.6.0"
 
 var (
 	showHelp    = pflag.BoolP("help", "h", false, "Show usage")
@@ -33,7 +34,7 @@ type pingMonitor struct {
 
 func printVersion() {
 	fmt.Println("ping-exporter")
-	fmt.Printf("Version: %s\n", version)
+	fmt.Printf("Version: %s\n", prog_version)
 	fmt.Println("Author(s): Tobias Famulla")
 }
 
@@ -107,11 +108,11 @@ func refreshDNS(targets []*pingTarget, monitor *mon.Monitor) {
 
 func startServer(pingMonitors []*pingMonitor, metricsPath string, listenAddress string) {
 
-	log.Infof("starting ping-exporter (Version: %s)", version)
+	log.Infof("starting ping-exporter (Version: %s)", prog_version)
 
 	infoPage := []byte(`<!doctype html>
 	<html>
-		<head><title>PING Exporter (Version ` + version + `)</title></head>
+		<head><title>PING Exporter (Version ` + prog_version + `)</title></head>
 		<body>
 		<h1>PING Exporter</h1>
 		<p><a href="` + metricsPath + `">Metrics</a></p>
@@ -165,6 +166,11 @@ func main() {
 	if err != nil {
 		log.Errorln(err)
 		os.Exit(3)
+	}
+
+	if config.version == "false" || version.Compare(config.version, "1.0", "!=") {
+		fmt.Fprintf(os.Stderr, "Configuration file version is not: %s\n", "1.0")
+		os.Exit(5)
 	}
 
 	if !config.hasPingMultiConfig {
