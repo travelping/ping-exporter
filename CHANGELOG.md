@@ -2,6 +2,10 @@
 
 ## pre v1.0.0
 
+### master
+
+* update libraries to newest versions
+
 ### 0.6.0
 
 * [breaking] add labels for source and target
