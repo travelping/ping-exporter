@@ -5,7 +5,7 @@ WORKDIR /go/src/github.com/travelping/ping-exporter
 RUN     dep ensure -v && \
         CGO_ENABLED=0 GOOS=linux go build -v -a -o /ping-exporter .
 
-FROM    alpine:3.8
+FROM    alpine:3.17
 ARG     VCS_REF="master"
 LABEL   \
         org.label-schema.name="travelping/ping-exporter" \
@@ -17,7 +17,7 @@ LABEL   \
         org.label-schema.docker.cmd.help="docker exec -it $CONTAINER /ping-exporter --help"
 
 
-RUN     apk --no-cache add ca-certificates
+RUN     apk update && apk upgrade && apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY    --from=build-stage /ping-exporter .
 CMD     ["./ping-exporter"]
