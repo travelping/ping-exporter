@@ -2,9 +2,10 @@
 
 ## pre v1.0.0
 
-### master
+### 0.7.0
 
 * update libraries to newest versions
+* Use Alpine 3.17 as base image
 
 ### 0.6.0
 
